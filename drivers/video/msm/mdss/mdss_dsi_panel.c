@@ -28,6 +28,9 @@
 
 #ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
 #include <linux/input/prevent_sleep.h>
+
+#ifdef CONFIG_POWERSUSPEND
+#include <linux/powersuspend.h>
 #endif
 
 #define DT_CMD_HDR 6
@@ -690,6 +693,10 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	display_on = true;
 	lazyplug_enter_lazy(false); 
 
+#ifdef CONFIG_POWERSUSPEND
+	set_power_suspend_state_panel_hook(POWER_SUSPEND_INACTIVE);
+#endif
+
 	pinfo = &pdata->panel_info;
 	ctrl = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
@@ -791,6 +798,10 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
        ts_get_prevent_sleep(prevent_sleep);
        if (prevent_sleep)
 	       dt2w_scr_suspended = true;
+#endif
+
+#ifdef CONFIG_POWERSUSPEND
+	set_power_suspend_state_panel_hook(POWER_SUSPEND_ACTIVE);
 #endif
 
 end:
