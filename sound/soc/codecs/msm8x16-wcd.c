@@ -4216,11 +4216,8 @@ static int msm8x16_wcd_hph_pa_event(struct snd_soc_dapm_widget *w,
 #endif
 		}
 #ifdef CONFIG_MACH_WT88047
-		usleep_range(10000, 10100);
-		if (!state)
-			gpio_direction_output(EXT_SPK_AMP_HEADSET_GPIO, false);
-		else
-			schedule_delayed_work(&analog_switch_enable, msecs_to_jiffies(500));
+		// TODO: Is hadset connected?
+		gpio_direction_output(EXT_SPK_AMP_HEADSET_GPIO, true);
 #endif
 		break;
 
@@ -4275,7 +4272,7 @@ static int msm8x16_wcd_hph_pa_event(struct snd_soc_dapm_widget *w,
 			w->name);
 		usleep_range(10000, 10100);
 #ifdef CONFIG_MACH_WT88047
-		enable_ldo17(0);
+		gpio_direction_output(EXT_SPK_AMP_HEADSET_GPIO, false);
 #endif
 		break;
 	}
