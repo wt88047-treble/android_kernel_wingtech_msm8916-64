@@ -89,10 +89,18 @@
 		pinctrl-1 = <&mpu6050_sleep>;
 		interrupt-parent = <&msm_gpio>;
 		interrupts = <115 0x2>;
-		vdd-supply = <&pm8916_l17>;		
+		vdd-supply = <&pm8916_l17>;	
+		vlogic-supply = <&pm8916_l16>;
 		vi2c-supply = <&pm8916_l6>;
 		invn,gpio-int = <&msm_gpio 115 0x2>;
 		invn,place = "Portrait Up Back Side";
+	};
+
+	yamaha@2e {
+		compatible = "yamaha,yas537";
+		reg = <0x2e>;
+		vdd-supply = <&pm8916_l17>;
+		vio-supply = <&pm8916_l6>;
 	};
 		
 };
@@ -315,9 +323,29 @@
 
 };
 
+&pm8916_l16 {
+	qcom,init-voltage = <2800000>;
+	regulator-always-on;
+};
+
+&pm8916_pon {
+	qcom,poweron-vadc = <&pm8916_vadc>;
+
+	qcom,pon_1 {
+		qcom,s1-timer = <6000>;
+	};
+};
+
 &pm8916_vadc {
-	chan@30 {
-		qcom,scale-function = <10>;
+	chan@11 {
+		label = "mpp2_vol";
+		reg = <0x11>;
+		qcom,decimation = <0>;
+		qcom,pre-div-channel-scaling = <0>;
+		qcom,calibration-type = "absolute";
+		qcom,scale-function = <0>;
+		qcom,hw-settle-time = <0>;
+		qcom,fast-avg-setup = <0>;
 	};
 };
 
@@ -403,3 +431,26 @@
         vbus_otg-supply = <&smb1360_otg_supply>;
 };
 
+&pm8916_gpios {
+	gpio@c100 { /* GPIO 2 */
+		/* NFC_CLK_REQ */
+		status = "disabled";
+	};
+
+	gpio@c200 { /* GPIO 3 */
+		/* External regulator control for WTR */
+		qcom,mode = <1>;
+		qcom,output-type = <1>;
+		qcom,invert = <0>;
+		qcom,pull = <5>;
+		qcom,vin-sel = <0>;
+		qcom,out-strength = <3>;
+		qcom,src-sel = <0>;
+		qcom,master-en = <1>;
+		status = "ok";
+	};
+};
+
+&apc_vreg_corner {
+	qcom,cpr-voltage-floor = <1050000 1100000 1250000>;
+};
