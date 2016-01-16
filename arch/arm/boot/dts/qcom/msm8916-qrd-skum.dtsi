@@ -173,40 +173,55 @@
 };
 
 
+&i2c_6 { /* BLSP1 QUP6 */
+	nfc-nci@e {
+		status = "disabled";
+	};
+
+	aw2013@45 {
+		compatible = "awinic,aw2013";
+		reg = <0x45>;
+		vdd-supply = <&pm8916_l17>;
+		vcc-supply = <&pm8916_l6>;
+
+		aw2013,red {
+			aw2013,name = "red";
+			aw2013,id = <0>;
+			aw2013,max-brightness = <255>;
+			aw2013,max-current = <3>;
+			aw2013,rise-time-ms = <2>;
+			aw2013,hold-time-ms = <1>;
+			aw2013,fall-time-ms = <2>;
+			aw2013,off-time-ms = <1>;
+		};
+
+		aw2013,green {
+			aw2013,name = "green";
+			aw2013,id = <1>;
+			aw2013,max-brightness = <255>;
+			aw2013,max-current = <3>;
+			aw2013,rise-time-ms = <2>;
+			aw2013,hold-time-ms = <1>;
+			aw2013,fall-time-ms = <2>;
+			aw2013,off-time-ms = <1>;
+		};
+
+		aw2013,blue {
+			aw2013,name = "blue";
+			aw2013,id = <2>;
+			aw2013,max-brightness = <255>;
+			aw2013,max-current = <3>;
+			aw2013,rise-time-ms = <2>;
+			aw2013,hold-time-ms = <1>;
+			aw2013,fall-time-ms = <2>;
+			aw2013,off-time-ms = <1>;
+		};
+	};
+};
 
 &soc {
 	spi_0 {
 		status = "disabled";
-	};
-
-	gpio-leds {
-		compatible = "gpio-leds";
-		status = "okay";
-		pinctrl-names = "default";
-		pinctrl-0 = <&gpio_led_off>;
-
-		red {
-			gpios = <&msm_gpio 8 0>;
-			label = "red";
-			linux,default-trigger = "none";
-			default-state = "off";
-			retain-state-suspended;
-		};
-
-		green {
-			gpios = <&msm_gpio 9 0>;
-			label = "green";
-			linux,default-trigger = "none";
-			default-state = "off";
-			retain-state-suspended;
-		};
-
-		blue {
-			gpios = <&msm_gpio 10 0>;
-			label = "blue";
-			linux,default-trigger = "none";
-			default-state = "off";
-		};
 	};
 
 	sound {
