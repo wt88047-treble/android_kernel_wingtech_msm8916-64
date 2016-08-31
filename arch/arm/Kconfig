@@ -24,6 +24,8 @@ config ARM
 	select HAVE_ARCH_JUMP_LABEL if !XIP_KERNEL
 	select HAVE_ARCH_KGDB
 	select HAVE_ARCH_MMAP_RND_BITS if MMU
+	select HAVE_ARCH_MMAP_RND_BITS
+	select HAVE_ARCH_MMAP_RND_COMPAT_BITS if COMPAT
 	select HAVE_ARCH_SECCOMP_FILTER
 	select HAVE_ARCH_TRACEHOOK
 	select HAVE_BPF_JIT
@@ -37,6 +39,7 @@ config ARM
 	select HAVE_FTRACE_MCOUNT_RECORD if (!XIP_KERNEL)
 	select HAVE_FUNCTION_GRAPH_TRACER if (!THUMB2_KERNEL)
 	select HAVE_FUNCTION_TRACER if (!XIP_KERNEL)
+	select HAVE_ARCH_MMAP_RND_BITS if MMU
 	select HAVE_GENERIC_DMA_COHERENT
 	select HAVE_HW_BREAKPOINT if (PERF_EVENTS && (CPU_V6 || CPU_V6K || CPU_V7))
 	select HAVE_IDE if PCI || ISA || PCMCIA
@@ -121,6 +124,23 @@ config HAVE_PROC_CPU
 
 config NO_IOPORT_MAP
 	bool
+
+config ARCH_MMAP_RND_BITS_MIN
+       default 14 if ARM64_64K_PAGES
+       default 18
+
+# max bits determined by the following formula:
+#  VA_BITS - PAGE_SHIFT - 3
+#  VA_BITS is always 39
+config ARCH_MMAP_RND_BITS_MAX
+       default 20 if ARM64_64K_PAGES
+       default 24
+
+config ARCH_MMAP_RND_COMPAT_BITS_MIN
+       default 11
+
+config ARCH_MMAP_RND_COMPAT_BITS_MAX
+       default 16
 
 config EISA
 	bool
