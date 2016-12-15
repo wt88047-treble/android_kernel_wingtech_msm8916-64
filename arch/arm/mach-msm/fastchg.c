@@ -3,6 +3,8 @@
  *
  * Port to Nexus 5 : flar2 <asegaert@gmail.com>
  *
+ * Port to Osprey : engstk <eng.stk@sapo.pt>
+ *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
  * may be copied, distributed, and modified under those terms.
@@ -17,8 +19,8 @@
 /*
  * Possible values for "force_fast_charge" are :
  *
- *   0 - disabled (default)
- *   1 - increase charge current limit to 900mA
+ *   0 - Disabled (default)
+ *   1 - Force faster charge
 */
 
 #include <linux/kobject.h>
@@ -26,7 +28,8 @@
 #include <linux/fastchg.h>
 #include <linux/string.h>
 
-int force_fast_charge = 0;
+int force_fast_charge = 1;
+
 static int __init get_fastcharge_opt(char *ffc)
 {
 	if (strcmp(ffc, "0") == 0) {
@@ -76,9 +79,6 @@ int force_fast_charge_init(void)
 {
 	int force_fast_charge_retval;
 
-//	force_fast_charge = FAST_CHARGE_DISABLED; /* Forced fast charge disabled by default */
-	force_fast_charge = FAST_CHARGE_FORCE_AC; /* Forced fast charge enabled by default */
-
 	force_fast_charge_kobj = kobject_create_and_add("fast_charge", kernel_kobj);
 	if (!force_fast_charge_kobj) {
 			return -ENOMEM;
@@ -102,4 +102,3 @@ void force_fast_charge_exit(void)
 
 module_init(force_fast_charge_init);
 module_exit(force_fast_charge_exit);
-
