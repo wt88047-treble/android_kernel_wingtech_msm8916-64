@@ -1302,7 +1302,7 @@ static const struct soc_enum msm_snd_enum[] = {
 	SOC_ENUM_SINGLE_EXT(6, pri_rx_sample_rate_text),
 	SOC_ENUM_SINGLE_EXT(6, mi2s_tx_sample_rate_text),
 #ifdef CONFIG_MACH_WT88047
-	SOC_ENUM_SINGLE_EXT(3, lineout_text),
+	SOC_ENUM_SINGLE_EXT(5, lineout_text),
 #endif
 };
 
@@ -1328,7 +1328,7 @@ static const struct snd_kcontrol_new msm_snd_controls[] = {
 	SOC_ENUM_EXT("MI2S TX SampleRate", msm_snd_enum[4],
 			mi2s_tx_sample_rate_get, mi2s_tx_sample_rate_put),
 #ifdef CONFIG_MACH_WT88047
-	SOC_ENUM_EXT("Lineout_1 amp", msm_snd_enum[4],
+	SOC_ENUM_EXT("Lineout_1 amp", msm_snd_enum[5],
 			lineout_status_get, lineout_status_put),
 #endif
 };
