@@ -179,7 +179,11 @@ static int radio_hci_smd_register_dev(struct radio_data *hsmd)
 		(unsigned long) hsmd);
 	hdev->send  = radio_hci_smd_send_frame;
 	hdev->destruct = radio_hci_smd_destruct;
+#ifdef CONFIG_RADIO_IRIS_TRANSPORT_NO_FIRMWARE
+	hdev->close_smd = radio_hci_smd_deregister;
+#else
 	hdev->close_smd = radio_hci_smd_exit;
+#endif
 
 	/* Open the SMD Channel and device and register the callback function */
 	rc = smd_named_open_on_edge("APPS_FM", SMD_APPS_WCNSS,
@@ -205,7 +209,6 @@ static int radio_hci_smd_register_dev(struct radio_data *hsmd)
 	hsmd->hdev = hdev;
 	return 0;
 }
-
 #ifdef CONFIG_RADIO_IRIS_TRANSPORT_NO_FIRMWARE
 void radio_hci_smd_deregister(void)
 #else
@@ -231,6 +234,9 @@ int radio_hci_smd_init(void)
 static int radio_hci_smd_init(void)
 #endif
 {
+#ifdef CONFIG_RADIO_IRIS_TRANSPORT_NO_FIRMWARE
+return radio_hci_smd_register_dev(&hs);
+#else
 	int ret;
 
 	if (chan_opened) {
@@ -247,6 +253,7 @@ static int radio_hci_smd_init(void)
 	}
 	chan_opened = true;
 	return ret;
+#endif
 }
 
 #ifndef CONFIG_RADIO_IRIS_TRANSPORT_NO_FIRMWARE

@@ -72,7 +72,9 @@ static void radio_hci_cmd_task(unsigned long arg);
 static void radio_hci_rx_task(unsigned long arg);
 static struct video_device *video_get_dev(void);
 static DEFINE_RWLOCK(hci_task_lock);
+#if 0
 extern struct mutex fm_smd_enable;
+#endif
 
 typedef int (*radio_hci_request_func)(struct radio_hci_dev *hdev,
 		int (*req)(struct
@@ -5231,13 +5233,14 @@ static int iris_fops_release(struct file *file)
 		return retval;
 	}
 END:
+#ifdef IRIS_TRANSPORT_NO_FIRMWARE
+	if (radio->fm_hdev != NULL)
+#else
 	mutex_lock(&fm_smd_enable);
 	if (radio->fm_hdev != NULL)
 		radio->fm_hdev->close_smd();
-#ifdef IRIS_TRANSPORT_NO_FIRMWARE
-	radio_hci_smd_deregister();
-#endif
 	mutex_unlock(&fm_smd_enable);
+#endif
 	if (retval < 0)
 		FMDERR("Err on disable FM %d\n", retval);
 
@@ -5458,6 +5461,7 @@ static const struct v4l2_file_operations iris_fops = {
 	.open           = iris_fops_open,
 #endif
 };
+
 
 static struct video_device iris_viddev_template = {
 	.fops                   = &iris_fops,
