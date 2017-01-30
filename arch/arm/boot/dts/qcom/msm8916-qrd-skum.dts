@@ -18,8 +18,8 @@
 / {
 	model = "Qualcomm Technologies, Inc. MSM 8916 QRD SKUM";
 	compatible = "qcom,msm8916-qrd-skum", "qcom,msm8916-qrd", "qcom,msm8916", "qcom,qrd";
-	qcom,board-id = <0x1000b 0>, <0x1000b 7>,
-			<0x1010b 0>, <0x1010b 7>,
+	qcom,board-id = <0x1000b 0>, <0x1000b 7>, <0x1010b 12>,
+			<0x1010b 0>, <0x1010b 7>, <0x1000b 12>, <0x3010b 12>,
 			<0x2010b 0>, <0x2010b 7>;                                                                    
 
 };
@@ -46,6 +46,7 @@
                 qcom,thermistor-c1-coeff = <0x85D2>;
                 qcom,float-voltage-mv = <4350>;
                 qcom,iterm-ma = <100>;
+                qcom,otg-batt-curr-limit = <950>;
                 qcom,thermal-mitigation = <1500 700 600 0>;
                 qcom,config-hard-thresholds;
                 qcom,hot-bat-decidegc = <600>;
@@ -59,6 +60,8 @@
                 qcom,cool-bat-ma = <600>;
                 regulator-name = "smb1360_otg_vreg";
                 qcom,shdn-after-pwroff;
+                qcom,fg-reset-at-pon;
+                qcom,fg-reset-thresold-mv = <100>;
             };
         };
 
