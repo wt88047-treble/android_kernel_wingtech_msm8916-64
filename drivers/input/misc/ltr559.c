@@ -569,7 +569,11 @@ int ltr559_ps_ondemand_state (void)
     u32 psdata = 0;
     int proximity_state = LTR559_ON_DEMAND_RESET;
     int ret = 0;
+#ifdef CONFIG_MACH_WT88047
+	ktime_t	timestamp;
 
+	timestamp = ktime_get_boottime();
+#endif
 
     // Enable the Sensor
     ltr559_set_ps_threshold(client, LTR559_PS_THRES_LOW_0, 0);
