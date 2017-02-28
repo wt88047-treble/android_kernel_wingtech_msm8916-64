@@ -154,14 +154,6 @@ static u8 is_ic_update_crash;
 #endif
 static struct i2c_client *update_client;
 
-#if CTP_CHARGER_DETECT
-extern int power_supply_get_battery_charge_state(struct power_supply *psy);
-static struct power_supply *batt_psy;
-static u8 is_charger_plug;
-static u8 pre_charger_status;
-
-#endif
-
 #if CTP_PROC_INTERFACE
 static struct i2c_client *g_focalclient;
 #endif
@@ -288,16 +280,6 @@ static int ft5x06_i2c_write(struct i2c_client *client, char *writebuf,
 	return ret;
 }
 
-static int ft5x0x_write_reg(struct i2c_client *client, u8 addr, const u8 val)
-{
-	u8 buf[2] = {0};
-
-	buf[0] = addr;
-	buf[1] = val;
-
-	return ft5x06_i2c_write(client, buf, sizeof(buf));
-}
-
 #if CTP_SYS_APK_UPDATE
 static int ft5x0x_read_reg(struct i2c_client *client, u8 addr, u8 *val)
 {
@@ -355,23 +337,6 @@ static irqreturn_t ft5x06_ts_interrupt(int irq, void *dev_id)
 		CTP_ERROR("%s: Invalid data\n", __func__);
 		return IRQ_HANDLED;
 	}
-
-#if CTP_CHARGER_DETECT
-	if (!batt_psy) {
-		CTP_ERROR("tp interrupt battery supply not found\n");
-		batt_psy = power_supply_get_by_name("usb");
-	} else {
-		is_charger_plug = (u8)power_supply_get_battery_charge_state(batt_psy);
-
-		CTP_DEBUG("1 is_charger_plug %d, prev %d", is_charger_plug, pre_charger_status);
-		if (is_charger_plug != pre_charger_status) {
-			pre_charger_status = is_charger_plug;
-			ft5x0x_write_reg(update_client, 0x8B, is_charger_plug);
-			CTP_DEBUG("2 is_charger_plug %d, prev %d", is_charger_plug, pre_charger_status);
-		}
-	}
-
-#endif
 
 	ip_dev = data->input_dev;
 	buf = data->tch_data;
@@ -764,24 +729,6 @@ static int ft5x06_ts_resume(struct device *dev)
 
 	enable_irq(data->client->irq);
 #endif /* CONFIG_TOUCHSCREEN_PREVENT_SLEEP */
-
-#if CTP_CHARGER_DETECT
-	batt_psy = power_supply_get_by_name("usb");
-	if (!batt_psy)
-		CTP_ERROR("tp resume battery supply not found\n");
-	else {
-		is_charger_plug = (u8)power_supply_get_battery_charge_state(batt_psy);
-
-		CTP_DEBUG("is_charger_plug %d, prev %d", is_charger_plug, pre_charger_status);
-		if (is_charger_plug) {
-			ft5x0x_write_reg(update_client, 0x8B, 1);
-		} else {
-			ft5x0x_write_reg(update_client, 0x8B, 0);
-		}
-	}
-	pre_charger_status = is_charger_plug;
-#endif
-
 
 	data->suspended = false;
 #ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
@@ -1281,11 +1228,6 @@ static u8 fts_ctpm_update_project_setting(struct i2c_client *client)
 	ft5x06_i2c_read(client, buf, 4, buf, 128);
 	msleep(10);
 
-	ft5x0x_write_reg(client, 0xfc, 0xaa);
-	msleep(30);
-	ft5x0x_write_reg(client, 0xfc, 0x55);
-	msleep(200);
-
 	is_ic_update_crash = 1;
 	return buf[4];
 }
@@ -1397,43 +1339,6 @@ static ssize_t ft5x06_fw_name_store(struct device *dev,
 }
 
 static DEVICE_ATTR(fw_name, 0664, ft5x06_fw_name_show, ft5x06_fw_name_store);
-
-static int ft5x06_auto_cal(struct i2c_client *client)
-{
-	struct ft5x06_ts_data *data = i2c_get_clientdata(client);
-	u8 temp = 0, i;
-
-	/* set to factory mode */
-	msleep(2 * data->pdata->soft_rst_dly);
-	ft5x0x_write_reg(client, FT_REG_DEV_MODE, FT_FACTORYMODE_VALUE);
-	msleep(data->pdata->soft_rst_dly);
-
-	/* start calibration */
-	ft5x0x_write_reg(client, FT_DEV_MODE_REG_CAL, FT_CAL_START);
-	msleep(2 * data->pdata->soft_rst_dly);
-	for (i = 0; i < FT_CAL_RETRY; i++) {
-		ft5x0x_read_reg(client, FT_REG_CAL, &temp);
-		/*return to normal mode, calibration finish */
-		if (((temp & FT_CAL_MASK) >> FT_4BIT_SHIFT) == FT_CAL_FIN)
-			break;
-	}
-
-	/*calibration OK */
-	msleep(2 * data->pdata->soft_rst_dly);
-	ft5x0x_write_reg(client, FT_REG_DEV_MODE, FT_FACTORYMODE_VALUE);
-	msleep(data->pdata->soft_rst_dly);
-
-	/* store calibration data */
-	ft5x0x_write_reg(client, FT_DEV_MODE_REG_CAL, FT_CAL_STORE);
-	msleep(2 * data->pdata->soft_rst_dly);
-
-	/* set to normal mode */
-	ft5x0x_write_reg(client, FT_REG_DEV_MODE, FT_WORKMODE_VALUE);
-	msleep(2 * data->pdata->soft_rst_dly);
-
-	return 0;
-}
-
 
 static int ft5x06_fw_upgrade(struct device *dev, bool force)
 {
@@ -1776,52 +1681,6 @@ static int ft5x0x_ReadFirmware(char *firmware_name, unsigned char *firmware_buf)
 	return 0;
 }
 #endif
-
-#if FTS_PROC_APK_DEBUG
-static void delay_qt_ms(unsigned long  w_ms)
-{
-	unsigned long i;
-	unsigned long j;
-
-	for (i = 0; i < w_ms; i++) {
-		for (j = 0; j < 1000; j++)
-			udelay(1);
-	}
-}
-
-static int fts_ctpm_auto_clb(void)
-{
-	unsigned char uc_temp;
-	unsigned char i ;
-
-	printk("[FTS] start auto CLB.\n");
-	msleep(200);
-	ft5x0x_write_reg(update_client, 0, 0x40);
-	delay_qt_ms(100);
-	ft5x0x_write_reg(update_client, 2, 0x4);
-	delay_qt_ms(300);
-	for (i = 0; i < 100; i++) {
-		ft5x0x_read_reg(update_client, 0, &uc_temp);
-		if (((uc_temp&0x70)>>4) == 0x0)
-			break;
-		delay_qt_ms(200);
-		printk("[FTS] waiting calibration %d\n", i);
-	}
-
-	printk("[FTS] calibration OK.\n");
-
-	msleep(300);
-	ft5x0x_write_reg(update_client, 0, 0x40);
-	delay_qt_ms(100);
-	ft5x0x_write_reg(update_client, 2, 0x5);
-	delay_qt_ms(300);
-	ft5x0x_write_reg(update_client, 0, 0x0);
-	msleep(300);
-	printk("[FTS] store CLB result OK.\n");
-	return 0;
-}
-#endif
-
 
 #if CTP_SYS_APK_UPDATE
 static int fts_ctpm_fw_upgrade_with_app_file(char *firmware_name)
@@ -2921,12 +2780,6 @@ if (err < 0)
 				CTP_DEBUG(" ctp upgrade fail err = %d \n", ret_auto_upgrade);
 		} while ((ret_auto_upgrade < 0) && (i < 3));
 	}
-#endif
-
-#if CTP_CHARGER_DETECT
-	batt_psy = power_supply_get_by_name("usb");
-	if (!batt_psy)
-		CTP_DEBUG("tp battery supply not found\n");
 #endif
 
 	enable_irq(data->client->irq);
