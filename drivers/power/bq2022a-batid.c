@@ -12,7 +12,7 @@
 #include <linux/bitops.h>
 #include <linux/spinlock.h>
 #include <asm/io.h>
-#include <asm/system.h>
+#include <asm/system_misc.h>
 #include <linux/types.h>
 #include <linux/slab.h>
 #include <linux/device.h>
