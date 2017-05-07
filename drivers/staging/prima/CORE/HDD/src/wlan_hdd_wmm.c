@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2015 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -92,6 +92,12 @@
 #define DHCP_DESTINATION_PORT 0x4300
 
 #define HDD_WMM_UP_TO_AC_MAP_SIZE 8
+
+#define IPv6_ADDR_ARRAY(a) (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5],\
+        (a)[6], (a)[7], (a)[8], (a)[9], (a)[10], (a)[11], (a)[12], (a)[13],\
+        (a)[14], (a)[15]
+#define IPv6_ADDR_STR "%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:"\
+                       "%02x%02x:%02x%02x"
 
 const v_U8_t hddWmmUpToAcMap[] = {
    WLANTL_AC_BE,
@@ -1876,6 +1882,112 @@ v_BOOL_t hdd_skb_is_eapol_or_wai_packet(struct sk_buff *skb)
        return VOS_TRUE;
 
     return VOS_FALSE;
+}
+
+/**============================================================================
+  @brief hdd_log_ip_addr() - Function to log IP header src and dst address
+  @param skb      : [in]  pointer to OS packet (sk_buff)
+  @return         : none
+  ===========================================================================*/
+void hdd_log_ip_addr(struct sk_buff *skb)
+{
+   union generic_ethhdr *pHdr;
+   struct iphdr *pIpHdr;
+   unsigned char * pPkt;
+   char *buf;
+
+   pPkt = skb->data;
+   pHdr = (union generic_ethhdr *)pPkt;
+
+   if (pHdr->eth_II.h_proto == htons(ETH_P_IP))
+   {
+      pIpHdr = (struct iphdr *)&pPkt[sizeof(pHdr->eth_II)];
+
+      buf = (char *)&pIpHdr->saddr;
+      VOS_TRACE(VOS_MODULE_ID_HDD, WMM_TRACE_LEVEL_ERROR,
+               "%s: src addr %d:%d:%d:%d", __func__,
+               buf[0], buf[1], buf[2], buf[3]);
+
+      buf = (char *)&pIpHdr->daddr;
+      VOS_TRACE(VOS_MODULE_ID_HDD, WMM_TRACE_LEVEL_ERROR,
+               "%s: dst addr %d:%d:%d:%d", __func__,
+               buf[0], buf[1], buf[2], buf[3]);
+   }
+   else if (pHdr->eth_II.h_proto ==  htons(ETH_P_IPV6))
+   {
+      pIpHdr = (struct iphdr *)&pPkt[sizeof(pHdr->eth_8023)];
+
+      buf = (char *)&pIpHdr->saddr;
+      VOS_TRACE(VOS_MODULE_ID_HDD, WMM_TRACE_LEVEL_ERROR,
+               "%s: src addr "IPv6_ADDR_STR, __func__, IPv6_ADDR_ARRAY(buf));
+
+      buf = (char *)&pIpHdr->daddr;
+      VOS_TRACE(VOS_MODULE_ID_HDD, WMM_TRACE_LEVEL_ERROR,
+               "%s: dst addr "IPv6_ADDR_STR, __func__, IPv6_ADDR_ARRAY(buf));
+   }
+   else if ((ntohs(pHdr->eth_II.h_proto) < WLAN_MIN_PROTO) &&
+            (pHdr->eth_8023.h_snap.dsap == WLAN_SNAP_DSAP) &&
+            (pHdr->eth_8023.h_snap.ssap == WLAN_SNAP_SSAP) &&
+            (pHdr->eth_8023.h_snap.ctrl == WLAN_SNAP_CTRL))
+   {
+      if (pHdr->eth_8023.h_proto == htons(ETH_P_IP))
+      {
+         pIpHdr = (struct iphdr *)&pPkt[sizeof(pHdr->eth_8023)];
+
+         buf = (char *)&pIpHdr->saddr;
+         VOS_TRACE(VOS_MODULE_ID_HDD, WMM_TRACE_LEVEL_ERROR,
+                  "%s: src addr %d:%d:%d:%d", __func__,
+                  buf[0], buf[1], buf[2], buf[3]);
+
+         buf = (char *)&pIpHdr->daddr;
+         VOS_TRACE(VOS_MODULE_ID_HDD, WMM_TRACE_LEVEL_ERROR,
+                  "%s: dst addr %d:%d:%d:%d", __func__,
+                  buf[0], buf[1], buf[2], buf[3]);
+      }
+      else if (pHdr->eth_8023.h_proto == htons(ETH_P_IPV6))
+      {
+         pIpHdr = (struct iphdr *)&pPkt[sizeof(pHdr->eth_8023)];
+
+         buf = (char *)&pIpHdr->saddr;
+         VOS_TRACE(VOS_MODULE_ID_HDD, WMM_TRACE_LEVEL_ERROR,
+               "%s: src addr "IPv6_ADDR_STR, __func__, IPv6_ADDR_ARRAY(buf));
+
+         buf = (char *)&pIpHdr->daddr;
+         VOS_TRACE(VOS_MODULE_ID_HDD, WMM_TRACE_LEVEL_ERROR,
+                "%s: dst addr "IPv6_ADDR_STR, __func__, IPv6_ADDR_ARRAY(buf));
+      }
+   }
+}
+
+/**============================================================================
+  @brief hdd_get_arp_src_ip() - Function to get ARP src IP addr
+  @param skb      : [in]  pointer to OS packet (sk_buff)
+  @return         : IP addr
+  ===========================================================================*/
+uint32_t  hdd_get_arp_src_ip(struct sk_buff *skb)
+{
+   struct arphdr *arp;
+   unsigned char *arp_ptr;
+   uint32_t src_ip;
+
+#define ARP_HDR_SIZE ( sizeof(__be16)*3 + sizeof(unsigned char)*2 )
+#define ARP_SENDER_HW_ADDRESS_SZ (6)
+#define ARP_SENDER_IP_ADDRESS_SZ (4)
+
+   arp = (struct arphdr *)skb->data;
+
+   arp_ptr = (unsigned char *)arp + ARP_HDR_SIZE;
+   arp_ptr += ARP_SENDER_HW_ADDRESS_SZ;
+
+   memcpy(&src_ip, arp_ptr, ARP_SENDER_IP_ADDRESS_SZ);
+
+   src_ip=ntohl(src_ip);
+
+   return src_ip;
+
+#undef ARP_HDR_SIZE
+#undef ARP_SENDER_HW_ADDRESS_SZ
+#undef ARP_SENDER_IP_ADDRESS_SZ
 }
 
 /**============================================================================
