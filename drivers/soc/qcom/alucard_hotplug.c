@@ -373,7 +373,7 @@ static int hotplug_start(void)
 	alucardhp_wq = alloc_workqueue("alucardhp_wq", WQ_HIGHPRI, 0);
 
 	if (!alucardhp_wq) {
-		printk(KERN_ERR "Failed to create alucard hotplug workqueue\n");
+		pr_err("Failed to create alucard hotplug workqueue\n");
 		return -EFAULT;
 	}
 
@@ -846,7 +846,7 @@ static int __init alucard_hotplug_init(void)
 
 	ret = sysfs_create_group(kernel_kobj, &alucard_hotplug_attr_group);
 	if (ret) {
-		printk(KERN_ERR "failed at(%d)\n", __LINE__);
+		pr_err("failed at(%d)\n", __LINE__);
 		return ret;
 	}
 
