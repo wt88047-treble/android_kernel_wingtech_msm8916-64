@@ -65,11 +65,7 @@ static struct hotplug_tuners {
 #endif
 } hotplug_tuners_ins = {
 	.hotplug_sampling_rate = 30,
-#ifdef CONFIG_MACH_JF
 	.hotplug_enable = 0,
-#else
-	.hotplug_enable = 0,
-#endif
 	.min_cpus_online = 1,
 	.maxcoreslimit = NR_CPUS,
 	.maxcoreslimit_sleep = 1,
