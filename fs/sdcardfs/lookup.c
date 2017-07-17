@@ -281,17 +281,19 @@ static struct dentry *__sdcardfs_lookup(struct dentry *dentry,
 				&lower_path);
 	/* check for other cases */
 	if (err == -ENOENT) {
-		struct dentry *child;
-		struct dentry *match = NULL;
-		mutex_lock(&lower_dir_dentry->d_inode->i_mutex);
-		spin_lock(&lower_dir_dentry->d_lock);
-		list_for_each_entry(child, &lower_dir_dentry->d_subdirs, d_u.d_child) {
-			if (child && child->d_inode) {
-				if (qstr_case_eq(&child->d_name, name)) {
-					match = dget(child);
-					break;
-				}
-			}
+		struct file *file;
+		const struct cred *cred = current_cred();
+
+		struct sdcardfs_name_data buffer = {
+			.ctx.actor = sdcardfs_name_match,
+			.to_find = name,
+			.name = __getname(),
+			.found = false,
+		};
+
+		if (!buffer.name) {
+			err = -ENOMEM;
+			goto out;
 		}
 		file = dentry_open(lower_parent_path, O_RDONLY, cred);
 		if (IS_ERR(file)) {
