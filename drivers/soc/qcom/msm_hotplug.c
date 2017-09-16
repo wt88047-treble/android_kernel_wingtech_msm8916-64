@@ -43,7 +43,7 @@
 #define DEFAULT_MIN_CPUS_ONLINE         1
 #define DEFAULT_MAX_CPUS_ONLINE         NR_CPUS
 #define DEFAULT_FAST_LANE_LOAD          99
-#define DEFAULT_FAST_LANE_MIN_FREQ      1209600000
+#define DEFAULT_FAST_LANE_MIN_FREQ      1094400000
 
 /*
  * debug = 1 will print info with dprintk.
