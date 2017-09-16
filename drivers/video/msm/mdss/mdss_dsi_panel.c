@@ -28,6 +28,7 @@
 
 #ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
 #include <linux/input/prevent_sleep.h>
+#endif
 
 #ifdef CONFIG_POWERSUSPEND
 #include <linux/powersuspend.h>
