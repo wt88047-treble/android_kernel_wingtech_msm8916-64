@@ -27,8 +27,6 @@
 #include <linux/powersuspend.h>
 #endif  /* CONFIG_POWERSUSPEND */
 
-#define HOTPLUG_ENABLED                 1
-
 struct hotplug_cpuinfo {
 #ifndef CONFIG_ALUCARD_HOTPLUG_USE_CPU_UTIL
 	u64 prev_cpu_wall;
@@ -67,7 +65,7 @@ static struct hotplug_tuners {
 #endif
 } hotplug_tuners_ins = {
 	.hotplug_sampling_rate = 30,
-	.hotplug_enable = 0,
+	.hotplug_enable = 1,
 	.min_cpus_online = 1,
 	.maxcoreslimit = NR_CPUS,
 	.maxcoreslimit_sleep = 1,
