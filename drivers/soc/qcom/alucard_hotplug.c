@@ -27,6 +27,8 @@
 #include <linux/powersuspend.h>
 #endif  /* CONFIG_POWERSUSPEND */
 
+#define HOTPLUG_ENABLED                 1
+
 struct hotplug_cpuinfo {
 #ifndef CONFIG_ALUCARD_HOTPLUG_USE_CPU_UTIL
 	u64 prev_cpu_wall;
