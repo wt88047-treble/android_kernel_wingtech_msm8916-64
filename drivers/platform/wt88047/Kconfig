@@ -1,0 +1,24 @@
+# Redmi2 configuration options
+
+config MACH_REDMI2
+	bool "wt88047 device"
+	depends on ARCH_MSM
+	help
+	  Support for Redmi2 products
+
+config MACH_REDMI2_MSM8916
+	bool "Redmi2 MSM8916"
+	depends on ARCH_MSM8916
+	select MACH_REDMI2
+	help
+	  Support for MSM8916 Redmi2 variants
+
+menu "Redmi2 board selection"
+
+config MACH_WT88047
+	bool "wt88047 board"
+	select MACH_REDMI2_MSM8916
+	help
+	  Support for Redmi2 WT88047 variant
+
+endmenu

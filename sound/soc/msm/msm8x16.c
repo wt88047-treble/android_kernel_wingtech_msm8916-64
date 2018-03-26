@@ -385,6 +385,83 @@ static void param_set_mask(struct snd_pcm_hw_params *p, int n, unsigned bit)
 static int msm8x16_mclk_event(struct snd_soc_dapm_widget *w,
 			      struct snd_kcontrol *kcontrol, int event);
 
+#ifdef CONFIG_MACH_WT88047
+static struct delayed_work lineout_amp_enable;
+static struct delayed_work lineout_amp_dualmode;
+
+static void msm8x16_ext_spk_gpio_request(void)
+{
+	if (gpio_request(EXT_SPK_AMP_GPIO, "ext_spk_amp_gpio")) {
+		pr_err("%s: gpio_request failed for ext_spk_amp_gpio.\n", __func__);
+		return;
+	}
+
+	if (gpio_request(EXT_SPK_AMP_GPIO_1, "ext_spk_amp_gpio_1")) {
+		pr_err("%s: gpio_request failed for ext_spk_amp_gpio_1.\n", __func__);
+		return;
+	}
+
+	if (gpio_request(EXT_SPK_AMP_HEADSET_GPIO, "ext_spk_amp_headset_gpio")) {
+		pr_err("%s: gpio_request failed for ext_spk_amp_headset_gpio.\n", __func__);
+		return;
+	}
+}
+
+static void msm8x16_ext_spk_gpio_free(void)
+{
+	if (gpio_is_valid(EXT_SPK_AMP_GPIO))
+		gpio_free(EXT_SPK_AMP_GPIO);
+
+	if (gpio_is_valid(EXT_SPK_AMP_GPIO_1))
+		gpio_free(EXT_SPK_AMP_GPIO_1);
+
+	if (gpio_is_valid(EXT_SPK_AMP_HEADSET_GPIO))
+		gpio_free(EXT_SPK_AMP_HEADSET_GPIO);
+}
+
+static void msm8x16_ext_spk_delayed_enable(struct work_struct *work)
+{
+	int i;
+
+	gpio_direction_output(EXT_SPK_AMP_HEADSET_GPIO, 0);
+	usleep_range(13000, 15000);
+	gpio_direction_output(EXT_SPK_AMP_GPIO, 1);
+	usleep_range(13000, 15000);
+
+	for(i = 5; i; --i)
+	{
+		gpio_direction_output(EXT_SPK_AMP_GPIO_1, 1);
+		usleep_range(100, 105);
+		gpio_direction_output(EXT_SPK_AMP_GPIO_1, 0);
+		usleep_range(100, 105);
+	}
+	gpio_direction_output(EXT_SPK_AMP_GPIO_1, 1);
+
+	pr_info("%s: Enable external speaker PAs.\n", __func__);
+}
+
+static void msm8x16_ext_spk_delayed_dualmode(struct work_struct *work)
+{
+	int i;
+
+	gpio_direction_output(EXT_SPK_AMP_HEADSET_GPIO, 1);
+	usleep_range(13000, 15000);
+	gpio_direction_output(EXT_SPK_AMP_GPIO, 1);
+	usleep_range(13000, 15000);
+
+	for(i = 5; i; --i)
+	{
+		gpio_direction_output(EXT_SPK_AMP_GPIO_1, 1);
+		usleep_range(100, 105);
+		gpio_direction_output(EXT_SPK_AMP_GPIO_1, 0);
+		usleep_range(100, 105);
+	}
+	gpio_direction_output(EXT_SPK_AMP_GPIO_1, 1);
+
+	pr_info("%s: Enable external speaker PAs dualmode.\n", __func__);
+}
+#endif
+
 static const struct snd_soc_dapm_widget msm8x16_dapm_widgets[] = {
 
 	SND_SOC_DAPM_SUPPLY_S("MCLK", -1, SND_SOC_NOPM, 0, 0,
@@ -414,6 +491,9 @@ static char const *pri_rx_sample_rate_text[] = {"KHZ_48", "KHZ_96",
 static char const *mi2s_tx_sample_rate_text[] = {"KHZ_48", "KHZ_96",
 					"KHZ_192", "KHZ_8",
 					"KHZ_16", "KHZ_32"};
+#ifdef CONFIG_MACH_WT88047
+static const char *const lineout_text[] = {"DISABLE", "ENABLE", "DUALMODE"};
+#endif
 
 static int msm_auxpcm_be_params_fixup(struct snd_soc_pcm_runtime *rtd,
 					struct snd_pcm_hw_params *params)
@@ -678,6 +758,39 @@ static int loopback_mclk_put(struct snd_kcontrol *kcontrol,
 	}
 	return ret;
 }
+
+#ifdef CONFIG_MACH_WT88047
+static int lineout_status_get(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	return 0;
+}
+
+static int lineout_status_put(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	pr_info("%s: external speaker PA mode: %ld\n", __func__, ucontrol->value.integer.value[0]);
+
+	switch (ucontrol->value.integer.value[0]) {
+	case 0:
+		gpio_direction_output(EXT_SPK_AMP_GPIO_1, 0);
+		usleep_range(3000, 5000);
+		gpio_direction_output(EXT_SPK_AMP_GPIO , 0);
+		break;
+	case 1:
+		schedule_delayed_work(&lineout_amp_enable, msecs_to_jiffies(100));
+		break;
+	case 2:
+		schedule_delayed_work(&lineout_amp_dualmode, msecs_to_jiffies(100));
+		break;
+	default:
+		pr_err("%s: Unexpected input value\n", __func__);
+		break;
+	}
+
+	return 0;
+}
+#endif
 
 static int msm_btsco_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 					struct snd_pcm_hw_params *params)
@@ -1188,6 +1301,9 @@ static const struct soc_enum msm_snd_enum[] = {
 	SOC_ENUM_SINGLE_EXT(2, loopback_mclk_text),
 	SOC_ENUM_SINGLE_EXT(6, pri_rx_sample_rate_text),
 	SOC_ENUM_SINGLE_EXT(6, mi2s_tx_sample_rate_text),
+#ifdef CONFIG_MACH_WT88047
+	SOC_ENUM_SINGLE_EXT(5, lineout_text),
+#endif
 };
 
 static const char *const btsco_rate_text[] = {"BTSCO_RATE_8KHZ",
@@ -1211,6 +1327,10 @@ static const struct snd_kcontrol_new msm_snd_controls[] = {
 			pri_rx_sample_rate_get, pri_rx_sample_rate_put),
 	SOC_ENUM_EXT("MI2S TX SampleRate", msm_snd_enum[4],
 			mi2s_tx_sample_rate_get, mi2s_tx_sample_rate_put),
+#ifdef CONFIG_MACH_WT88047
+	SOC_ENUM_EXT("Lineout_1 amp", msm_snd_enum[5],
+			lineout_status_get, lineout_status_put),
+#endif
 };
 
 static int msm8x16_mclk_event(struct snd_soc_dapm_widget *w,
@@ -1735,6 +1855,18 @@ static void *def_msm8x16_wcd_mbhc_cal(void)
 	 * 210-290 == Button 2
 	 * 360-680 == Button 3
 	 */
+#ifdef CONFIG_MACH_WT88047
+	btn_low[0] = 75;
+	btn_high[0] = 75;
+	btn_low[1] = 130;
+	btn_high[1] = 130;
+	btn_low[2] = 260;
+	btn_high[2] = 260;
+	btn_low[3] = 450;
+	btn_high[3] = 450;
+	btn_low[4] = 500;
+	btn_high[4] = 500;
+#else
 	btn_low[0] = 75;
 	btn_high[0] = 75;
 	btn_low[1] = 150;
@@ -1745,6 +1877,7 @@ static void *def_msm8x16_wcd_mbhc_cal(void)
 	btn_high[3] = 450;
 	btn_low[4] = 500;
 	btn_high[4] = 500;
+#endif
 
 	return msm8x16_wcd_cal;
 }
@@ -1793,6 +1926,13 @@ static int msm_audrx_init(struct snd_soc_pcm_runtime *rtd)
 			return ret;
 		}
 	}
+
+#ifdef CONFIG_MACH_WT88047
+	msm8x16_ext_spk_gpio_request();
+
+	INIT_DELAYED_WORK(&lineout_amp_enable, msm8x16_ext_spk_delayed_enable);
+	INIT_DELAYED_WORK(&lineout_amp_dualmode, msm8x16_ext_spk_delayed_dualmode);
+#endif
 	return msm8x16_wcd_hs_detect(codec, &mbhc_cfg);
 }
 
@@ -3376,6 +3516,9 @@ static int msm8x16_asoc_machine_remove(struct platform_device *pdev)
 		iounmap(pdata->vaddr_gpio_mux_mic_ctl);
 	if (pdata->vaddr_gpio_mux_pcm_ctl)
 		iounmap(pdata->vaddr_gpio_mux_pcm_ctl);
+#ifdef CONFIG_MACH_WT88047
+	msm8x16_ext_spk_gpio_free();
+#endif
 	snd_soc_unregister_card(card);
 	mutex_destroy(&pdata->cdc_mclk_mutex);
 	return 0;
