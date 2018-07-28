@@ -37,7 +37,7 @@ static bool irq_work_claim(struct irq_work *work)
 	for (;;) {
 		nflags = flags | IRQ_WORK_FLAGS;
 		oflags = cmpxchg(&work->flags, flags, nflags);
-		cpu_relaxed_read_long(&work->flags);
+		(void) cpu_relaxed_read_long(&work->flags);
 		if (oflags == flags)
 			break;
 		if (oflags & IRQ_WORK_PENDING)

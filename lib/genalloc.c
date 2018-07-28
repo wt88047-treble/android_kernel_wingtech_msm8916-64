@@ -54,7 +54,7 @@ static int set_bits_ll(unsigned long *addr, unsigned long mask_to_set)
 		return -EBUSY;
 	cpu_relax();
 	while ((nval = cmpxchg(addr, val, val | mask_to_set)) != val) {
-		cpu_relaxed_read_long(addr);
+		(void) cpu_relaxed_read_long(addr);
 		val = nval;
 		if (val & mask_to_set)
 			return -EBUSY;
@@ -73,7 +73,7 @@ static int clear_bits_ll(unsigned long *addr, unsigned long mask_to_clear)
 		return -EBUSY;
 	cpu_relax();
 	while ((nval = cmpxchg(addr, val, val & ~mask_to_clear)) != val) {
-		cpu_relaxed_read_long(addr);
+		(void) cpu_relaxed_read_long(addr);
 		val = nval;
 		if ((val & mask_to_clear) != mask_to_clear)
 			return -EBUSY;
