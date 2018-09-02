@@ -79,6 +79,10 @@ dtb-$(CONFIG_ARCH_MSM8909) += msm8909-sim.dtb \
 	apq8009-mtp-wcd9326-refboard.dtb \
 	apq8009-512mb-mtp-wcd9326-refboard.dtb
 
+ifeq ($(CONFIG_MACH_WT88047),y)
+dtb-$(CONFIG_ARCH_MSM8916) += msm8916-wt88047.dtb
+endif
+else
 dtb-$(CONFIG_ARCH_MSM8916) += msm8916-cdp.dtb \
 	msm8916-cdp-smb1360.dtb \
 	msm8916-mtp.dtb \
